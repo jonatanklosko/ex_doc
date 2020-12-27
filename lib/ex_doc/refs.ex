@@ -87,8 +87,8 @@ defmodule ExDoc.Refs do
   end
 
   defp fetch({_kind, module, _name, _arity} = ref) do
-    with mod_visibility <- fetch({:module, module}),
-         true <- mod_visibility in [:public, :hidden],
+    with module_visibility <- fetch({:module, module}),
+         true <- module_visibility in [:public, :hidden],
          {:ok, visibility} <- lookup(ref) do
       visibility
     else
@@ -100,17 +100,20 @@ defmodule ExDoc.Refs do
   defp fetch_entries(module, result) do
     case result do
       {:docs_v1, _, _, _, module_doc, _, docs} ->
-        module_visibility = visibility(module_doc)
+        module_visibility = visibility(:module, module, module_doc)
 
         for {{kind, name, arity}, _, _, doc, metadata} <- docs do
+          kind = kind(kind)
+
           visibility =
-            case {module_visibility, visibility(doc)} do
+            case {module_visibility, visibility(kind, name, doc)} do
+              {_, :none} -> :hidden
               {:hidden, :public} -> :hidden
               {_, visibility} -> visibility
             end
 
           for arity <- (arity - (metadata[:defaults] || 0))..arity do
-            {{kind(kind), module, name, arity}, visibility}
+            {{kind, module, name, arity}, visibility}
           end
         end
         |> List.flatten()
@@ -132,8 +135,28 @@ defmodule ExDoc.Refs do
     end
   end
 
-  defp visibility(:hidden), do: :hidden
-  defp visibility(_), do: :public
+  defguardp is_kind(kind) when kind in [:module, :callback, :type, :function]
+  defguardp no_docs?(doc) when doc == :none or (is_map(doc) and map_size(doc) == 0)
+
+  defp visibility(:module, _name, doc) when no_docs?(doc), do: :public
+  defp visibility(:callback, _name, doc) when no_docs?(doc), do: :public
+  defp visibility(:type, _name, doc) when no_docs?(doc), do: :public
+
+  defp visibility(:function, name, doc) when no_docs?(doc) do
+    if hd(Atom.to_charlist(name)) == ?_ do
+      :hidden
+    else
+      :public
+    end
+  end
+
+  defp visibility(kind, _name, :hidden) when is_kind(kind) do
+    :hidden
+  end
+
+  defp visibility(kind, _name, _doc) when is_kind(kind) do
+    :public
+  end
 
   defp kind(:macro), do: :function
   defp kind(:macrocallback), do: :callback

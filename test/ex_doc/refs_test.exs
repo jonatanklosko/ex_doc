@@ -8,6 +8,21 @@ defmodule ExDoc.RefsTest do
     @callback handle_foo() :: :ok
 
     def foo(), do: :ok
+
+    def foo(x), do: x
+    def _foo(x), do: x
+
+    @doc false
+    def foo(x, y), do: {x, y}
+
+    @doc false
+    def _foo(x, y), do: {x, y}
+
+    @doc "docs..."
+    def foo(x, y, z), do: {x, y, z}
+
+    @doc "docs..."
+    def _foo(x, y, z), do: {x, y, z}
   end
 
   test "get_visibility/1" do
@@ -26,6 +41,33 @@ defmodule ExDoc.RefsTest do
     assert Refs.get_visibility({:function, InMemory, :foo, 0}) == :public
     assert Refs.get_visibility({:function, InMemory, :foo, 9}) == :undefined
 
+    assert Refs.get_visibility({:function, WithModuleDoc, :foo, 1}) == :public
+    assert Refs.get_visibility({:function, WithModuleDoc, :_foo, 1}) == :hidden
+    assert Refs.get_visibility({:function, WithModuleDoc, :foo, 2}) == :hidden
+    assert Refs.get_visibility({:function, WithModuleDoc, :_foo, 2}) == :hidden
+    assert Refs.get_visibility({:function, WithModuleDoc, :foo, 3}) == :public
+    assert Refs.get_visibility({:function, WithModuleDoc, :_foo, 3}) == :public
+    assert Refs.get_visibility({:function, WithModuleDoc, :foo, 4}) == :undefined
+    assert Refs.get_visibility({:function, WithModuleDoc, :_foo, 4}) == :undefined
+
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :foo, 1}) == :public
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :_foo, 1}) == :hidden
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :foo, 2}) == :hidden
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :_foo, 2}) == :hidden
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :foo, 3}) == :public
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :_foo, 3}) == :public
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :foo, 4}) == :undefined
+    assert Refs.get_visibility({:function, WithoutModuleDoc, :_foo, 4}) == :undefined
+
+    assert Refs.get_visibility({:function, InMemory, :foo, 1}) == :public
+    # assert Refs.get_visibility({:function, InMemory, :_foo, 1}) == :hidden
+    # assert Refs.get_visibility({:function, InMemory, :foo, 2}) == :hidden
+    # assert Refs.get_visibility({:function, InMemory, :_foo, 2}) == :hidden
+    assert Refs.get_visibility({:function, InMemory, :foo, 3}) == :public
+    assert Refs.get_visibility({:function, InMemory, :_foo, 3}) == :public
+    assert Refs.get_visibility({:function, InMemory, :foo, 4}) == :undefined
+    assert Refs.get_visibility({:function, InMemory, :_foo, 4}) == :undefined
+
     # macros are classified as functions
     assert Refs.get_visibility({:function, Kernel, :def, 2}) == :public
 
@@ -36,6 +78,8 @@ defmodule ExDoc.RefsTest do
     assert Refs.get_visibility({:type, :sets, :set, 0}) == :public
     assert Refs.get_visibility({:type, :sets, :set, 9}) == :undefined
 
+    assert Refs.get_visibility({:type, WithModuleDoc, :t, 0}) == :public
+    assert Refs.get_visibility({:type, WithoutModuleDoc, :t, 0}) == :public
     # types are in abstract_code chunk so not available for in-memory modules
     assert Refs.get_visibility({:type, InMemory, :t, 0}) == :undefined
 
@@ -47,6 +91,10 @@ defmodule ExDoc.RefsTest do
     assert Refs.get_visibility({:callback, :gen_server, :handle_call, 3}) == :public
     assert Refs.get_visibility({:callback, :gen_server, :handle_call, 9}) == :undefined
     assert Refs.get_visibility({:callback, InMemory, :handle_foo, 0}) == :public
+    assert Refs.get_visibility({:callback, WithModuleDoc, :handle_foo, 0}) == :public
+    assert Refs.get_visibility({:callback, WithModuleDoc, :handle_macro_foo, 0}) == :public
+    assert Refs.get_visibility({:callback, WithoutModuleDoc, :handle_foo, 0}) == :public
+    assert Refs.get_visibility({:callback, WithoutModuleDoc, :handle_macro_foo, 0}) == :public
     assert Refs.get_visibility({:callback, InMemory, :handle_foo, 9}) == :undefined
   end
 
