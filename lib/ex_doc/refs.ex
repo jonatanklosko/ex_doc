@@ -135,12 +135,14 @@ defmodule ExDoc.Refs do
     end
   end
 
-  defguardp is_kind(kind) when kind in [:module, :callback, :type, :function]
+  defguardp is_kind(kind) when kind in [:callback, :function, :module, :type]
   defguardp no_docs?(doc) when doc == :none or (is_map(doc) and map_size(doc) == 0)
 
-  defp visibility(:module, _name, doc) when no_docs?(doc), do: :public
-  defp visibility(:callback, _name, doc) when no_docs?(doc), do: :public
-  defp visibility(:type, _name, doc) when no_docs?(doc), do: :public
+  defp visibility(kind, _name, :hidden) when is_kind(kind),
+    do: :hidden
+
+  defp visibility(kind, _name, doc) when kind in [:callback, :module, :type] and no_docs?(doc),
+    do: :public
 
   defp visibility(:function, name, doc) when no_docs?(doc) do
     if hd(Atom.to_charlist(name)) == ?_ do
@@ -148,10 +150,6 @@ defmodule ExDoc.Refs do
     else
       :public
     end
-  end
-
-  defp visibility(kind, _name, :hidden) when is_kind(kind) do
-    :hidden
   end
 
   defp visibility(kind, _name, _doc) when is_kind(kind) do
