@@ -613,25 +613,20 @@ defmodule ExDoc.Retriever do
     if not should_have_doc?({module, moduledoc}) do
       false
     else
-      module_type = get_type(module)
-
-      case {{module_type, module, moduledoc}, {kind, name, doc}} do
-        {_, {kind, _, _}} when kind in [:callback, :macrocallback] ->
+      case {kind, name, doc} do
+        {kind, _, _} when kind in [:callback, :macrocallback] ->
           true
 
-        {_, {_, _, :hidden}} ->
+        {_, _, :hidden} ->
           false
 
-        {{:protocol, _, _}, {_, name, _}} when name in [:impl_for, :impl_for!] ->
-          false
-
-        {_, {_, _, %{}}} ->
+        {_, _, %{}} ->
           true
 
         # We keep this clause with backwards compatibility with Elixir,
         # from v1.12+, functions not starting with _ always default to %{}.
         # TODO: Remove me once we require Elixir v1.12.
-        {_, {_, name, :none}} ->
+        {_, name, :none} ->
           hd(Atom.to_charlist(name)) != ?_
       end
     end
