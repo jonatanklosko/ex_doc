@@ -22,45 +22,45 @@ defmodule WithModuleDoc do
 
   """
 
-  @type t() :: :ok
+  @type a_type() :: any
 
-  @callback handle_foo() :: :ok
-  @macrocallback handle_macro_foo() :: :ok
+  @callback a_callback() :: :ok
+  @macrocallback a_macrocallback() :: :ok
 
-  def foo(x), do: x
-  def _foo(x), do: x
-
-  @doc false
-  def foo(x, y), do: {x, y}
+  def no_doc(), do: :no_doc
+  def _no_doc(), do: :no_doc
 
   @doc false
-  def _foo(x, y), do: {x, y}
+  def doc_false(), do: :doc_false
 
-  @doc "docs..."
-  def foo(x, y, z), do: {x, y, z}
+  @doc false
+  def _doc_false(), do: :doc_false
 
-  @doc "docs..."
-  def _foo(x, y, z), do: {x, y, z}
+  @doc "doc..."
+  def with_doc(), do: :with_doc
+
+  @doc "doc..."
+  def _with_doc(), do: :with_doc
 end
 
 defmodule WithoutModuleDoc do
-  @type t() :: :ok
+  @type a_type() :: any
 
-  @callback handle_foo() :: :ok
-  @macrocallback handle_macro_foo() :: :ok
+  @callback a_callback() :: :ok
+  @macrocallback a_macrocallback() :: :ok
 
-  def foo(x), do: x
-  def _foo(x), do: x
-
-  @doc false
-  def foo(x, y), do: {x, y}
+  def no_doc(), do: :no_doc
+  def _no_doc(), do: :no_doc
 
   @doc false
-  def _foo(x, y), do: {x, y}
+  def doc_false(), do: :doc_false
 
-  @doc "docs..."
-  def foo(x, y, z), do: {x, y, z}
+  @doc false
+  def _doc_false(), do: :doc_false
 
-  @doc "docs..."
-  def _foo(x, y, z), do: {x, y, z}
+  @doc "doc..."
+  def with_doc(), do: :with_doc
+
+  @doc "doc..."
+  def _with_doc(), do: :with_doc
 end

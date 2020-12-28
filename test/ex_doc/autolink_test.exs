@@ -452,29 +452,17 @@ defmodule ExDoc.AutolinkTest do
 
     # warnings with functions starting with an underscore
     # TODO in a following commit: Split this test into tests inside a describe block
-    assert warn("WithModuleDoc._foo/1",
-             file: "lib/with_module_doc.ex",
-             id: "WithModuleDoc._foo/1"
-           ) =~
-             "documentation references \"WithModuleDoc._foo/1\" but it is hidden\n"
+    assert warn("WithModuleDoc._no_doc/0") =~
+             "documentation references \"WithModuleDoc._no_doc/0\" but it is hidden\n"
 
-    assert warn("WithoutModuleDoc._foo/1",
-             file: "lib/with_module_doc.ex",
-             id: "WithoutModuleDoc._foo/1"
-           ) =~
-             "documentation references \"WithoutModuleDoc._foo/1\" but it is hidden\n"
+    assert warn("WithoutModuleDoc._no_doc/0") =~
+             "documentation references \"WithoutModuleDoc._no_doc/0\" but it is hidden\n"
 
-    assert warn("WithModuleDoc._foo/2",
-             file: "lib/with_module_doc.ex",
-             id: "WithModuleDoc._foo/2"
-           ) =~
-             "documentation references \"WithModuleDoc._foo/2\" but it is hidden\n"
+    assert warn("WithModuleDoc._doc_false/0") =~
+             "documentation references \"WithModuleDoc._doc_false/0\" but it is hidden\n"
 
-    assert warn("WithoutModuleDoc._foo/2",
-             file: "lib/with_module_doc.ex",
-             id: "WithoutModuleDoc._foo/2"
-           ) =~
-             "documentation references \"WithoutModuleDoc._foo/2\" but it is hidden\n"
+    assert warn("WithoutModuleDoc._doc_false/0") =~
+             "documentation references \"WithoutModuleDoc._doc_false/0\" but it is hidden\n"
   end
 
   ## Helpers
