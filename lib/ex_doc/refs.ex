@@ -100,17 +100,12 @@ defmodule ExDoc.Refs do
   defp fetch_entries(module, result) do
     case result do
       {:docs_v1, _, _, _, module_doc, _, docs} ->
-        module_visibility = visibility(:module, module, module_doc)
+        module_visibility = visibility({module, module_doc})
 
         for {{kind, name, arity}, _, _, doc, metadata} <- docs do
           kind = kind(kind)
 
-          visibility =
-            case {module_visibility, visibility(kind, name, doc)} do
-              {_, :none} -> :hidden
-              {:hidden, :public} -> :hidden
-              {_, visibility} -> visibility
-            end
+          visibility = visibility({module, module_doc}, {kind, name, doc})
 
           for arity <- (arity - (metadata[:defaults] || 0))..arity do
             {{kind, module, name, arity}, visibility}
@@ -135,25 +130,20 @@ defmodule ExDoc.Refs do
     end
   end
 
-  defguardp is_kind(kind) when kind in [:callback, :function, :module, :type]
-  defguardp has_no_docs(doc) when doc == :none or doc == %{}
-
-  defp visibility(kind, _name, :hidden) when is_kind(kind),
-    do: :hidden
-
-  defp visibility(kind, _name, doc) when kind in [:callback, :module, :type] and has_no_docs(doc),
-    do: :public
-
-  defp visibility(:function, name, doc) when has_no_docs(doc) do
-    if hd(Atom.to_charlist(name)) == ?_ do
-      :hidden
-    else
+  defp visibility({module, moduledoc}) do
+    if ExDoc.Retriever.should_have_doc?({module, moduledoc}) do
       :public
+    else
+      :hidden
     end
   end
 
-  defp visibility(kind, _name, _doc) when is_kind(kind) do
-    :public
+  defp visibility({module, moduledoc}, {kind, name, doc}) do
+    if ExDoc.Retriever.should_have_doc?({module, moduledoc}, {kind, name, doc}) do
+      :public
+    else
+      :hidden
+    end
   end
 
   defp kind(:macro), do: :function

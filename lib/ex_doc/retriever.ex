@@ -88,13 +88,13 @@ defmodule ExDoc.Retriever do
     Refs.insert_from_chunk(module, result)
 
     case result do
-      # TODO: Once we require Elixir v1.12, we only keep modules that have map contents
-      {:docs_v1, _, _, _, :hidden, _, _} ->
-        false
-
-      {:docs_v1, _, _, _, _, _, _} = docs ->
-        _ = Code.ensure_loaded(module)
-        docs
+      {:docs_v1, _, _, _, moduledoc, _, _} = docs ->
+        if should_have_doc?({module, moduledoc}) do
+          _ = Code.ensure_loaded(module)
+          docs
+        else
+          false
+        end
 
       {:error, reason} ->
         cond do
@@ -228,8 +228,8 @@ defmodule ExDoc.Retriever do
 
   ## Function helpers
 
-  defp get_docs(%{type: type, docs: docs} = module_data, source, config) do
-    {:docs_v1, _, _, _, _, _, docs} = docs
+  defp get_docs(%{name: module, docs: docs} = module_data, source, config) do
+    {:docs_v1, _, _, _, moduledoc, _, docs} = docs
 
     groups_for_functions =
       Enum.map(config.groups_for_functions, fn {group, filter} ->
@@ -237,38 +237,13 @@ defmodule ExDoc.Retriever do
       end) ++ [{"Functions", fn _ -> true end}]
 
     function_docs =
-      for doc <- docs, doc?(doc, type) do
+      for {{kind, name, _}, _, _, content, _} = doc <- docs,
+          should_have_doc?({module, moduledoc}, {kind, name, content}),
+          kind in [:function, :macro] do
         get_function(doc, source, module_data, groups_for_functions)
       end
 
     {Enum.map(groups_for_functions, &elem(&1, 0)), filter_defaults(function_docs)}
-  end
-
-  # We are only interested in functions and macros for now
-  defp doc?({{kind, _, _}, _, _, _, _}, _) when kind not in [:function, :macro] do
-    false
-  end
-
-  # Skip impl_for and impl_for! for protocols
-  defp doc?({{_, name, _}, _, _, _, _}, :protocol) when name in [:impl_for, :impl_for!] do
-    false
-  end
-
-  # If content is a map, then it is ok.
-  defp doc?({_, _, _, %{}, _}, _) do
-    true
-  end
-
-  # We keep this clause with backwards compatibility with Elixir,
-  # from v1.12+, functions not starting with _ always default to %{}.
-  # TODO: Remove me once we require Elixir v1.12.
-  defp doc?({{_, name, _}, _, _, :none, _}, _type) do
-    hd(Atom.to_charlist(name)) != ?_
-  end
-
-  # Everything else is hidden.
-  defp doc?({_, _, _, _, _}, _) do
-    false
   end
 
   defp get_function(function, source, module_data, groups_for_functions) do
@@ -368,11 +343,13 @@ defmodule ExDoc.Retriever do
 
   ## Callback helpers
 
-  defp get_callbacks(%{type: :behaviour} = module_data, source) do
-    {:docs_v1, _, _, _, _, _, docs} = module_data.docs
+  defp get_callbacks(%{name: module, type: :behaviour} = module_data, source) do
+    {:docs_v1, _, _, _, moduledoc, _, docs} = module_data.docs
     optional_callbacks = module_data.name.behaviour_info(:optional_callbacks)
 
-    for {{kind, _, _}, _, _, _, _} = doc <- docs, kind in [:callback, :macrocallback] do
+    for {{kind, name, _}, _, _, content, _} = doc <- docs,
+        should_have_doc?({module, moduledoc}, {kind, name, content}),
+        kind in [:callback, :macrocallback] do
       get_callback(doc, source, optional_callbacks, module_data)
     end
   end
@@ -444,11 +421,12 @@ defmodule ExDoc.Retriever do
         do: behaviour
   end
 
-  defp get_types(module_data, source) do
-    {:docs_v1, _, _, _, _, _, docs} = module_data.docs
+  defp get_types(%{name: module, docs: docs} = module_data, source) do
+    {:docs_v1, _, _, _, moduledoc, _, docs} = docs
 
-    # TODO: When we require Elixir v1.12, we only keep contents that are maps
-    for {{:type, _, _}, _, _, content, _} = doc <- docs, content != :hidden do
+    for {{kind, name, _}, _, _, content, _} = doc <- docs,
+        should_have_doc?({module, moduledoc}, {kind, name, content}),
+        kind == :type do
       get_type(doc, source, module_data)
     end
   end
@@ -619,5 +597,43 @@ defmodule ExDoc.Retriever do
     name
     |> String.split(".")
     |> Enum.map_join(".", &Macro.underscore/1)
+  end
+
+  @doc """
+  Specifies whether to generate documentation for the given module.
+  """
+  # TODO: Once we require Elixir v1.12, we only keep modules that have map contents
+  def should_have_doc?({_, :hidden}), do: false
+  def should_have_doc?({_, _}), do: true
+
+  @doc """
+  Specifies whether to generate documentation for the given module component.
+  """
+  def should_have_doc?({module, moduledoc}, {kind, name, doc}) do
+    if not should_have_doc?({module, moduledoc}) do
+      false
+    else
+      module_type = get_type(module)
+
+      case {{module_type, module, moduledoc}, {kind, name, doc}} do
+        {_, {kind, _, _}} when kind in [:callback, :macrocallback] ->
+          true
+
+        {_, {_, _, :hidden}} ->
+          false
+
+        {{:protocol, _, _}, {_, name, _}} when name in [:impl_for, :impl_for!] ->
+          false
+
+        {_, {_, _, %{}}} ->
+          true
+
+        # We keep this clause with backwards compatibility with Elixir,
+        # from v1.12+, functions not starting with _ always default to %{}.
+        # TODO: Remove me once we require Elixir v1.12.
+        {_, {_, name, :none}} ->
+          hd(Atom.to_charlist(name)) != ?_
+      end
+    end
   end
 end
